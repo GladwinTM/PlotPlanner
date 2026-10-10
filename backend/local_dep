@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-plotplanner}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-plotplanner}
+      POSTGRES_DB: ${POSTGRES_DB:-plotplanner}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/001-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  profile-service:
+    build: { context: ., dockerfile: apps/profile_service/Dockerfile }
+    environment: { DATABASE_URL: ${DATABASE_URL} }
+    depends_on: { postgres: { condition: service_healthy } }
+    ports: ["8001:8000"]
+
+  knowledge-service:
+    build: { context: ., dockerfile: apps/knowledge_service/Dockerfile }
+    environment: { DATABASE_URL: ${DATABASE_URL}, EMBEDDING_MODEL: ${EMBEDDING_MODEL:-BAAI/bge-small-en-v1.5} }
+    depends_on: { postgres: { condition: service_healthy } }
+    ports: ["8002:8000"]
+
+  mcp-server:
+    build: { context: ., dockerfile: apps/mcp_server/Dockerfile }
+    environment:
+      PROFILE_SERVICE_URL: ${PROFILE_SERVICE_URL:-http://profile-service:8000}
+      KNOWLEDGE_SERVICE_URL: ${KNOWLEDGE_SERVICE_URL:-http://knowledge-service:8000}
+    depends_on:
+      - profile-service
+      - knowledge-service
+    ports: ["8003:8000"]
+
+volumes:
+  postgres_data:

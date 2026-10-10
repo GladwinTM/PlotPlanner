@@ -1,0 +1,45 @@
+# PlotPlanner backend
+
+PlotPlanner is a career-discovery product, built API-first. This repository begins
+with the backend because the durable product value is in a user's profile, the
+evidence it retrieves, and the actions an agent can take from that evidence.
+
+## Services
+
+| Service | Owns | Public responsibility |
+| --- | --- | --- |
+| `profile-service` | profiles, interests, goals | stores the user's explicit planning context |
+| `knowledge-service` | source documents, chunks, embeddings | ingests and semantically retrieves grounded evidence |
+| `agent-service` | agent runs and orchestration policy | composes profile and retrieval tools into planning runs |
+| `mcp-server` | MCP tool surface | exposes selected capabilities to MCP-capable clients |
+
+There is deliberately no generic `/api` proxy, chat endpoint, or mock AI response.
+Each HTTP endpoint exists to change or retrieve a domain resource. Services own
+their data and communicate through typed HTTP contracts; the initial deployment
+uses one PostgreSQL cluster with separate schemas, which keeps local operations
+simple without sharing tables across services.
+
+## Start locally
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+The compose stack enables the `vector` extension automatically. For development
+without containers, install the workspace with `uv sync --all-packages` and run
+each service from its directory with `uv run fastapi dev app/main.py`.
+
+## Initial contracts
+
+- `POST /v1/profiles` creates a profile; `GET/PATCH /v1/profiles/{id}` retrieves
+  or updates it.
+- `POST /v1/documents` accepts a plain-text source and creates its chunks and
+  embeddings. `POST /v1/search` retrieves the best matching chunks.
+- The agent service has no public run endpoint yet: a run is only useful when an
+  authenticated caller and an LLM provider are configured. Its typed tools and
+  run model are implemented now so that this capability can be added without
+  leaking retrieval logic into an API route.
+
+See [the architecture note](docs/architecture.md) for the service boundaries and
+the next implementation increments.
