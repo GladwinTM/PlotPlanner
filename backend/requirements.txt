@@ -1,0 +1,14 @@
+alembic>=1.13
+asyncpg
+fastapi
+fastembed
+fastmcp
+httpx
+pgvector
+psycopg[binary]>=3.2
+pydantic-settings
+PyJWT[crypto]>=2.8
+pytest>=8
+pytest-asyncio>=0.24
+sqlalchemy[asyncio]>=2.0
+uvicorn[standard]
