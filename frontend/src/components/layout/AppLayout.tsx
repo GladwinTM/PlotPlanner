@@ -13,6 +13,7 @@ import {
   Wallet,
 } from 'lucide-react'
 import { useAuth } from '../../app/AuthProvider'
+import { Bulb, Shape } from '../scrapbook'
 
 const LINKS = [
   { to: '/', label: 'Home', icon: House, end: true },
@@ -43,7 +44,7 @@ export function AppLayout() {
     <div className="shell">
       <div className="atmosphere" aria-hidden="true" />
       <aside className="sidebar">
-        <p className="brand small">PlotPlanner</p>
+        <div className="brand-lockup"><span className="brand-mark" aria-hidden="true"><Shape shape="circle" tone="blue" size="sm" /><Shape shape="square" tone="coral" size="sm" /><span className="brand-thread" /></span><p className="brand small">PlotPlanner</p></div>
         <nav className="side-nav" aria-label="Main">
           {LINKS.map(({ to, label, icon: Icon, end }) => (
             <NavLink key={to} to={to} end={end}>
@@ -53,6 +54,7 @@ export function AppLayout() {
           ))}
         </nav>
         <div className="side-user">
+          <Bulb />
           <strong>{session?.user.email ?? 'Account'}</strong>
           <button type="button" className="btn secondary" onClick={handleSignOut}>
             <LogOut size={16} aria-hidden="true" /> Sign out

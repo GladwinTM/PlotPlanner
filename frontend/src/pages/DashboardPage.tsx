@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { QueryState } from '../components/ui'
 import { useProfile } from '../hooks/useProfile'
 import { getOverview } from '../services/api'
+import { Bulb, PaperCard, Shape, WashiLabel } from '../components/scrapbook'
 
 export function DashboardPage() {
   const profile = useProfile()
@@ -12,7 +13,7 @@ export function DashboardPage() {
   return (
     <section className="page">
       <header className="page-head">
-        <p className="eyebrow">Your plot</p>
+        <WashiLabel>Your plot</WashiLabel>
         <h1>Welcome back, {name}.</h1>
         <p>Pick up where you left off. Every number here comes from what you've actually done.</p>
       </header>
@@ -20,13 +21,13 @@ export function DashboardPage() {
         {overview.data ? (
           <>
             <div className="stat-row">
-              <Stat label="Interests" value={overview.data.active_interests} />
-              <Stat label="Active pathways" value={overview.data.active_courses} />
-              <Stat label="Goals in motion" value={overview.data.active_goals} />
-              <Stat label="Minutes logged" value={overview.data.minutes_logged} />
+              <Stat label="Interests" value={overview.data.active_interests} tone="blue" />
+              <Stat label="Active pathways" value={overview.data.active_courses} tone="yellow" />
+              <Stat label="Goals in motion" value={overview.data.active_goals} tone="coral" />
+              <Stat label="Minutes logged" value={overview.data.minutes_logged} tone="blue" />
             </div>
             <div className="split">
-              <article className="panel">
+              <PaperCard tone="blue" taped className="panel">
                 <header className="panel-header"><h2>Learning</h2></header>
                 {overview.data.courses.length === 0 ? <EmptyLink to="/learn" text="No pathways yet. Generate one from an interest." /> : (
                   <ul className="plain">
@@ -38,8 +39,8 @@ export function DashboardPage() {
                     ))}
                   </ul>
                 )}
-              </article>
-              <article className="panel">
+              </PaperCard>
+              <PaperCard tone="coral" taped className="panel">
                 <header className="panel-header"><h2>Goals</h2></header>
                 {overview.data.goals.filter((g) => g.status === 'active').length === 0 ? <EmptyLink to="/goals" text="No active goals. Add one, career or personal." /> : (
                   <ul className="plain">
@@ -48,14 +49,14 @@ export function DashboardPage() {
                     ))}
                   </ul>
                 )}
-              </article>
+              </PaperCard>
             </div>
-            <article className="panel">
-              <header className="panel-header"><h2>Next</h2><p>Suggestions are rules over your activity, not guesses.</p></header>
+            <PaperCard tone="yellow" className="panel feature-card">
+              <Bulb /><header className="panel-header"><h2>Next</h2><p>Suggestions are rules over your activity, not guesses.</p></header>
               {overview.data.suggestions.length === 0 ? <p className="empty">Nothing to nudge. Keep going, or start something new in Explore.</p> : (
                 <ul className="plain">{overview.data.suggestions.map((item) => <li key={item.message}>{item.message}</li>)}</ul>
               )}
-            </article>
+            </PaperCard>
           </>
         ) : null}
       </QueryState>
@@ -63,8 +64,8 @@ export function DashboardPage() {
   )
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
-  return <div className="stat"><strong>{value}</strong><span>{label}</span></div>
+function Stat({ label, value, tone }: { label: string; value: number; tone: 'blue' | 'coral' | 'yellow' }) {
+  return <div className={`stat stat--${tone}`}><Shape shape={tone === 'yellow' ? 'star' : tone === 'coral' ? 'square' : 'circle'} tone={tone} size="sm" /><strong>{value}</strong><span>{label}</span></div>
 }
 
 function EmptyLink({ to, text }: { to: string; text: string }) {

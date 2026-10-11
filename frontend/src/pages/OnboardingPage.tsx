@@ -15,6 +15,7 @@ import {
   startOnboarding,
 } from '../services/api'
 import type { DraftGoal, DraftInterest, OnboardingDraft } from '../types/domain'
+import { Bulb, Shape, WashiLabel } from '../components/scrapbook'
 
 export function OnboardingPage() {
   const { session } = useAuth()
@@ -29,12 +30,13 @@ export function OnboardingPage() {
       <AnimatePresence mode="wait">
         {intro ? (
           <motion.section key="intro" className="intro" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <motion.p className="eyebrow" initial={{ y: 12, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>PlotPlanner</motion.p>
+            <div className="intro-shapes" aria-hidden="true"><Shape shape="star" tone="yellow" size="md" /><Shape shape="square" tone="coral" size="lg" /><Bulb /></div>
+            <motion.div initial={{ y: 12, opacity: 0 }} animate={{ y: 0, opacity: 1 }}><WashiLabel tone="blue">PlotPlanner</WashiLabel></motion.div>
             <motion.h1 initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.25 }}>
-              How are you doing, {name}?
+              Let’s make a little map of what makes you, you, {name}.
             </motion.h1>
             <motion.p className="lead" initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.7 }}>
-              Ready to find your plot?
+              One thought at a time. You’ll be able to review everything at the end.
             </motion.p>
             <motion.div className="actions" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}>
               <button type="button" className="btn primary" onClick={() => setIntro(false)}>Let's begin</button>
@@ -109,21 +111,25 @@ function Conversation({ initial }: { initial: Awaited<ReturnType<typeof startOnb
         </form>
         <Notice error={turn.error} />
       </div>
-      <aside className="panel review">
-        <header className="panel-header">
-          <h2>Your plot so far</h2>
-          <p>Edit anything before you finish. Nothing here is saved to your profile until you do.</p>
-        </header>
-        <DraftEditor draft={draft} onChange={setDraft} />
-        <div className="actions">
-          <button type="button" className="btn secondary" disabled={save.isPending} onClick={() => save.mutate()}>Save draft</button>
-          <button type="button" className="btn primary" disabled={finish.isPending || (draft.interests.length === 0 && draft.goals.length === 0)} onClick={() => finish.mutate()}>
-            {finish.isPending ? 'Building…' : status.ready_to_finish ? 'Finish and build my plot' : 'Finish with what I have'}
-          </button>
-          <button type="button" className="link" onClick={() => skip.mutate()}>Skip for now</button>
-        </div>
-        <Notice error={save.error ?? finish.error ?? skip.error} ok={note} />
-      </aside>
+      {status.ready_to_finish ? (
+        <aside className="panel review" aria-label="Review your answers">
+          <header className="panel-header"><WashiLabel>Your review</WashiLabel><h2>Your plot so far</h2><p>Edit anything before you finish. Nothing here is saved to your profile until you do.</p></header>
+          <DraftEditor draft={draft} onChange={setDraft} />
+          <div className="actions">
+            <button type="button" className="btn secondary" disabled={save.isPending} onClick={() => save.mutate()}>Save draft</button>
+            <button type="button" className="btn primary" disabled={finish.isPending || (draft.interests.length === 0 && draft.goals.length === 0)} onClick={() => finish.mutate()}>{finish.isPending ? 'Building…' : 'Finish and build my plot'}</button>
+            <button type="button" className="link" onClick={() => skip.mutate()}>Skip for now</button>
+          </div>
+          <Notice error={save.error ?? finish.error ?? skip.error} ok={note} />
+        </aside>
+      ) : (
+        <aside className="panel onboarding-progress">
+          <Bulb /><header className="panel-header"><WashiLabel tone="yellow">Your map</WashiLabel><h2>One question at a time</h2><p>Keep sharing what matters. Your editable review appears once the conversation is complete.</p></header>
+          <div className="progress-string" aria-label="Onboarding in progress"><span /><span /><span /><span /></div>
+          <button type="button" className="link" onClick={() => skip.mutate()} disabled={skip.isPending}>Skip for now</button>
+          <Notice error={skip.error} />
+        </aside>
+      )}
     </div>
   )
 }
