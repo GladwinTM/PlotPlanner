@@ -4,6 +4,7 @@ import { Notice } from '../components/ui'
 import { useProfile, useUpdateProfile } from '../hooks/useProfile'
 import { deleteAccountData, deleteFact, listFacts, updateFact } from '../services/api'
 import type { Profile } from '../types/profile'
+import { LoadingState } from '../components/scrapbook'
 
 type FormValues = {
   display_name: string
@@ -128,7 +129,7 @@ export function SettingsPage() {
         <p>The basics PlotPlanner uses to personalise your plans. You can change them any time.</p>
       </header>
 
-      {isPending ? <p className="empty">Loading your profile…</p> : null}
+      {isPending ? <LoadingState label="Gathering your profile" /> : null}
       {isError ? (
         <>
           <p className="toast err" role="alert">

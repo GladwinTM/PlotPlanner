@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react'
 import { Notice, QueryState, RichText, labelize } from '../components/ui'
 import { decideProposal, deleteConversation, getConversation, listConversations, retryChat, sendChat } from '../services/api'
 import type { Conversation } from '../types/domain'
+import { LoadingState } from '../components/scrapbook'
 
 export function ChatPage() {
   const client = useQueryClient()
@@ -39,7 +40,7 @@ export function ChatPage() {
         </QueryState>
       </aside>
       <div className="panel thread">
-        {active && thread.isPending ? <p className="empty">Loading…</p> : null}
+        {active && thread.isPending ? <LoadingState label="Opening this conversation" /> : null}
         {thread.isError ? <Notice error={thread.error} /> : null}
         <ol className="messages">
           {(current?.messages ?? []).map((message) => (

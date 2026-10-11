@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { ApiError } from '../services/api'
+import { LoadingState } from './scrapbook'
 
 export function errorText(error: unknown): string {
   if (error instanceof ApiError || error instanceof Error) return error.message
@@ -11,15 +12,17 @@ export function QueryState({
   error,
   onRetry,
   empty,
+  loadingLabel,
   children,
 }: {
   pending: boolean
   error: unknown
   onRetry?: () => void
   empty?: ReactNode
+  loadingLabel?: string
   children: ReactNode
 }) {
-  if (pending) return <p className="empty">Loading…</p>
+  if (pending) return <LoadingState label={loadingLabel} />
   if (error) {
     return (
       <>

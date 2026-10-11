@@ -2,6 +2,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useProfile } from '../hooks/useProfile'
 import { errorText } from '../components/ui'
 import { useAuth } from './AuthProvider'
+import { LoadingState } from '../components/scrapbook'
 
 /** Signed-in users who have not finished onboarding stay on that conversation. */
 export function ProtectedRoute() {
@@ -9,7 +10,7 @@ export function ProtectedRoute() {
   const location = useLocation()
   const profile = useProfile()
 
-  if (loading || (session && profile.isPending)) return <p className="empty centered">Loading…</p>
+  if (loading || (session && profile.isPending)) return <LoadingState fullPage label="Opening your workspace" />
   if (!session) return <Navigate to="/login" replace state={{ from: location.pathname }} />
   if (profile.isError) {
     return (
