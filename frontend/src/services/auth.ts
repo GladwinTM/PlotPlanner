@@ -1,5 +1,4 @@
 import type { Session } from '@supabase/supabase-js'
-import { getEnv } from '../lib/env'
 import { getSupabase } from '../lib/supabase'
 
 export type { Session }
@@ -33,25 +32,20 @@ export async function signUpWithPassword(email: string, password: string): Promi
   return { needsEmailConfirmation: data.session === null }
 }
 
-/** Public project auth settings: tells us which providers are enabled. */
-async function isGoogleEnabled(): Promise<boolean> {
-  const { supabaseUrl, supabasePublishableKey } = getEnv()
-  const response = await fetch(`${supabaseUrl}/auth/v1/settings`, { headers: { apikey: supabasePublishableKey } })
-  if (!response.ok) throw new Error(`Could not read the sign-in settings (HTTP ${response.status}).`)
-  const settings = (await response.json()) as { external?: { google?: boolean } }
-  return settings.external?.google === true
+/** Shared showcase account. Its data is intentionally non-sensitive and resettable. */
+export async function signInAsDemo(): Promise<void> {
+  await signInWithPassword('demo@plotplanner.app', 'PlotPlannerDemo!2026')
 }
 
-export async function signInWithGoogle(): Promise<void> {
-  // supabase-js redirects the whole page immediately, so a disabled provider
-  // would land the user on a raw JSON error. Check first and explain instead.
-  if (!(await isGoogleEnabled())) {
-    throw new Error('Google sign-in is not enabled for this project yet. Use email and password for now.')
-  }
-  const { error } = await getSupabase().auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo: window.location.origin },
+export async function sendPasswordReset(email: string): Promise<void> {
+  const { error } = await getSupabase().auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/reset-password`,
   })
+  if (error) throw error
+}
+
+export async function updatePassword(password: string): Promise<void> {
+  const { error } = await getSupabase().auth.updateUser({ password })
   if (error) throw error
 }
 

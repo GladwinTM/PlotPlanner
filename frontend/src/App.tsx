@@ -13,11 +13,14 @@ import { LoginPage } from './pages/LoginPage'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { OpportunitiesPage } from './pages/OpportunitiesPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { ForgotPasswordPage, ResetPasswordPage } from './pages/PasswordRecoveryPage'
 
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/onboarding" element={<OnboardingPage />} />
         <Route element={<AppLayout />}>

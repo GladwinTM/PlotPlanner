@@ -119,14 +119,14 @@ describe('login', () => {
     expect(await screen.findByText(/confirmation link to new@example.com/)).toBeInTheDocument()
   })
 
-  it('surfaces a provider error instead of failing silently when Google is unavailable', async () => {
+  it('signs into the populated demo workspace', async () => {
     signedIn(false)
-    vi.mocked(auth.signInWithGoogle).mockRejectedValue(new Error('Unsupported provider: provider is not enabled'))
+    vi.mocked(auth.signInAsDemo).mockResolvedValue()
     renderApp(<App />, { route: '/login' })
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Continue with Google' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Continue as demo user' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('provider is not enabled')
+    expect(auth.signInAsDemo).toHaveBeenCalledOnce()
   })
 })
 

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { Link, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../app/AuthProvider'
 import * as auth from '../services/auth'
 
@@ -78,14 +78,7 @@ export function LoginPage() {
             <button type="submit" className="btn primary" disabled={busy}>
               {mode === 'signin' ? 'Sign in' : 'Create account'}
             </button>
-            <button
-              type="button"
-              className="btn secondary"
-              disabled={busy}
-              onClick={() => run(auth.signInWithGoogle)}
-            >
-              Continue with Google
-            </button>
+            {mode === 'signin' ? <button type="button" className="btn secondary" disabled={busy} onClick={() => run(auth.signInAsDemo)}>Continue as demo user</button> : null}
           </div>
         </form>
 
@@ -100,6 +93,7 @@ export function LoginPage() {
         >
           {mode === 'signin' ? 'New here? Create an account' : 'Already have an account? Sign in'}
         </button>
+        {mode === 'signin' ? <Link className="link" to="/forgot-password">Forgot password?</Link> : null}
 
         {notice ? <p className="toast ok">{notice}</p> : null}
         {error ? (
