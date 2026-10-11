@@ -39,7 +39,7 @@ export function DocumentPanel({ profile, onDocumentCreated }: DocumentPanelProps
         content: content.trim(),
       })
       onDocumentCreated(document)
-      setStatus(`Indexed “${document.title}” into ${document.chunk_count} chunks.`)
+      setStatus(`Saved “${document.title}”. Open Documents to review its extracted text and facts.`)
       setTitle('')
       setSourceUri('')
       setContent('')

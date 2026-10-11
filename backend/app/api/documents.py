@@ -59,6 +59,12 @@ async def read_document(document_id: UUID, user: CurrentUser, session: Session):
     return await _detail(session, user.id, document_id)
 
 
+@router.post("/{document_id}/retry", response_model=DocumentDetail, dependencies=[rate_limited("upload", per_minute=5)])
+async def retry_document(document_id: UUID, user: CurrentUser, session: Session, llm: LLM):
+    document = await document_service.retry(session, llm, user.id, document_id)
+    return await _detail(session, user.id, document.id)
+
+
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_document(document_id: UUID, user: CurrentUser, session: Session, keep_confirmed_facts: bool = True):
     await document_service.delete_document(session, user.id, document_id, keep_confirmed_facts=keep_confirmed_facts)

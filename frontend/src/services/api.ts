@@ -172,6 +172,7 @@ export function uploadDocument(file: File): Promise<DocumentDetail> {
   return request<DocumentDetail>('/documents', { method: 'POST', body }, false)
 }
 export const deleteDocument = (id: string) => request<void>(`/documents/${id}`, { method: 'DELETE' })
+export const retryDocument = (id: string) => request<DocumentDetail>(`/documents/${id}/retry`, { method: 'POST' })
 
 export const getOverview = () => request<Overview>('/analytics/overview')
 export const getInterestAnalytics = () => request<InterestAnalytics>('/analytics/interests')

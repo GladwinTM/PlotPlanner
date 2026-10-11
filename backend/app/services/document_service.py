@@ -12,6 +12,8 @@ processing has no tool access.
 import asyncio
 import io
 import logging
+import os
+import shutil
 import zipfile
 from datetime import UTC, datetime
 from uuid import UUID
@@ -31,6 +33,8 @@ logger = logging.getLogger(__name__)
 MAX_DOCUMENTS = 50
 MAX_EXTRACTED_CHARS = 200_000
 AI_CHARS = 24_000
+OCR_MAX_PAGES = 10
+OCR_SCALE = 2  # 144 DPI: legible for resumes without unbounded raster memory.
 ALLOWED = {
     ".pdf": "application/pdf",
     ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -71,7 +75,38 @@ def _extract_pdf(data: bytes) -> str:
     with pymupdf.open(stream=data, filetype="pdf") as document:
         if document.needs_pass:
             raise BadRequestError("Password-protected PDFs are not supported", code="invalid_file_content")
-        return "\n".join(page.get_text() for page in document)
+        text = "\n".join(page.get_text() for page in document).strip()
+        if text:
+            return text
+        if len(document) > OCR_MAX_PAGES:
+            raise BadRequestError(
+                f"Scanned PDFs can contain at most {OCR_MAX_PAGES} pages.", code="ocr_page_limit",
+            )
+        return _ocr_pdf(document)
+
+
+def _ocr_pdf(document) -> str:
+    """OCR an image-only PDF with bounded, local raster work."""
+    try:
+        import pymupdf
+        import pytesseract
+        from PIL import Image
+    except ImportError as exc:
+        raise BadRequestError(
+            "This scanned PDF needs OCR, but OCR is not available on this server yet.", code="ocr_unavailable",
+        ) from exc
+    command = os.getenv("TESSERACT_CMD") or shutil.which("tesseract") or "/opt/homebrew/opt/tesseract/bin/tesseract"
+    if not os.path.isfile(command):
+        raise BadRequestError(
+            "This scanned PDF needs OCR, but the Tesseract engine is not available on this server yet.", code="ocr_unavailable",
+        )
+    pytesseract.pytesseract.tesseract_cmd = command
+    pages: list[str] = []
+    for page in document:
+        pixmap = page.get_pixmap(matrix=pymupdf.Matrix(OCR_SCALE, OCR_SCALE), alpha=False)
+        image = Image.open(io.BytesIO(pixmap.tobytes("png")))
+        pages.append(pytesseract.image_to_string(image, lang="eng"))
+    return "\n".join(pages).strip()
 
 
 def _extract_docx(data: bytes) -> str:
@@ -112,16 +147,19 @@ async def upload(session: AsyncSession, llm: LLMClient, user_id: UUID, filename:
     )
     session.add(document)
     await session.commit()
+    return await _process(session, llm, document)
 
+
+async def _process(session: AsyncSession, llm: LLMClient, document: Document) -> Document:
     try:
-        text = await asyncio.to_thread(extract_text, content_type, data)
+        text = await asyncio.to_thread(extract_text, document.content_type, document.content)
     except AppError as exc:
         return await _fail(session, document, exc.message)
     except Exception:
         logger.warning("text extraction failed for a %s upload", content_type)
         return await _fail(session, document, "Text could not be extracted from this file.")
     if not text:
-        return await _fail(session, document, "No text was found in this file. Scanned images are not supported.")
+        return await _fail(session, document, "No readable text was found. Try a clearer scan or a text-based PDF.")
     document.extracted_text = text
     await session.commit()
 
@@ -143,7 +181,7 @@ async def upload(session: AsyncSession, llm: LLMClient, user_id: UUID, filename:
         if fact.kind == "link" and fact.value.lower() not in lowered:
             continue
         session.add(ProfileFact(
-            user_id=user_id, kind=fact.kind, value=fact.value.strip()[:500], detail=fact.detail, source="document",
+            user_id=document.user_id, kind=fact.kind, value=fact.value.strip()[:500], detail=fact.detail, source="document",
             document_id=document.id, confirmed=False,
         ))
     document.processing_status = "processed"
@@ -151,6 +189,25 @@ async def upload(session: AsyncSession, llm: LLMClient, user_id: UUID, filename:
     document.processed_at = datetime.now(UTC)
     await session.commit()
     return document
+
+
+async def retry(session: AsyncSession, llm: LLMClient, user_id: UUID, document_id: UUID) -> Document:
+    document = await session.scalar(
+        select(Document)
+        .options(undefer(Document.content))
+        .where(Document.id == document_id, Document.user_id == user_id)
+    )
+    if document is None:
+        raise NotFoundError("Document not found")
+    if document.processing_status not in ("failed", "processing"):
+        raise BadRequestError("Only a document that did not finish can be read again.", code="document_not_retryable")
+    # Failed OCR/AI attempts may have left suggestions; do not duplicate them.
+    await session.execute(delete(ProfileFact).where(ProfileFact.user_id == user_id, ProfileFact.document_id == document.id, ProfileFact.confirmed.is_(False)))
+    document.processing_status = "processing"
+    document.error = None
+    document.processed_at = None
+    await session.commit()
+    return await _process(session, llm, document)
 
 
 async def _fail(session: AsyncSession, document: Document, message: str, *, keep_text: bool = False) -> Document:

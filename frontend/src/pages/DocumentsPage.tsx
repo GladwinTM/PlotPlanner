@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Notice, QueryState, labelize } from '../components/ui'
-import { deleteDocument, deleteFact, getDocument, listDocuments, updateFact, uploadDocument } from '../services/api'
+import { deleteDocument, deleteFact, getDocument, listDocuments, retryDocument, updateFact, uploadDocument } from '../services/api'
 
 export function DocumentsPage() {
   const client = useQueryClient()
@@ -15,6 +15,10 @@ export function DocumentsPage() {
   const remove = useMutation({
     mutationFn: deleteDocument,
     onSuccess: () => { setOpen(null); void client.invalidateQueries({ queryKey: ['documents'] }) },
+  })
+  const retry = useMutation({
+    mutationFn: retryDocument,
+    onSuccess: (doc) => { setOpen(doc.id); void client.invalidateQueries({ queryKey: ['documents'] }); void client.invalidateQueries({ queryKey: ['document', doc.id] }) },
   })
 
   return (
@@ -47,6 +51,7 @@ export function DocumentsPage() {
             <p>{labelize(detail.data.processing_status)}{detail.data.error ? ` — ${detail.data.error}` : ''}</p>
           </header>
           {detail.data.text_preview ? <pre className="preview">{detail.data.text_preview}</pre> : null}
+          {detail.data.processing_status !== 'processed' ? <div className="actions"><button type="button" className="btn secondary" disabled={retry.isPending} onClick={() => retry.mutate(detail.data.id)}>{retry.isPending ? 'Reading…' : 'Try reading again'}</button><Notice error={retry.error} /></div> : null}
           <h3>Facts to review</h3>
           {detail.data.facts.length === 0 ? <p className="empty">Nothing was extracted.</p> : detail.data.facts.map((fact) => <FactRow key={fact.id} fact={fact} onChange={() => void detail.refetch()} />)}
           <button type="button" className="link" onClick={() => remove.mutate(open)}>Delete document and unconfirmed facts</button>
